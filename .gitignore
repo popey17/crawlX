@@ -1,0 +1,12 @@
+tmp/
+bin/
+.DS_Store
+.env
+
+# IDEs
+.idea/
+*.swp
+
+.exe
+*.log
+*.test
