@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
 	"crawlx/internal/fetcher"
 	"fmt"
+	"net/http"
+	"time"
 )
 
 func main() {
 	fmt.Println("crawlx: ok")
 
-	status, body, err := fetcher.Fetch("https://example.com")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	status, body, err := fetcher.Fetch(ctx, http.MethodGet, "https://example.com")
 	if err != nil {
 		fmt.Println(err)
 		return
