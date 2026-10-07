@@ -1,4 +1,4 @@
-.PHONY: run build test vet fmt
+.PHONY: run build test vet fmt lint
 
 run: 
 	go run ./cmd/api
@@ -10,3 +10,6 @@ vet:
 	go vet ./...
 fmt: 
 	go fmt ./...
+
+lint:
+	golangci-lint run ./...
