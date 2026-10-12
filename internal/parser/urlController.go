@@ -38,11 +38,10 @@ func normalizeURL(baseUrl string, href string) (string, error) {
 
 	port := fullURL.Port()
 
-	if port != "" ||
-		(fullURL.Scheme != "http" && port != "80") ||
-		(fullURL.Scheme != "https" && port != "443") {
+	if port == "" ||
+		(fullURL.Scheme == "http" && port == "80") ||
+		(fullURL.Scheme == "https" && port == "443") {
 		fullURL.Host = host
-
 	} else {
 		fullURL.Host = host + ":" + port
 	}

@@ -32,7 +32,6 @@ func main() {
 		fmt.Println(err)
 	}
 
-	crawler.GetReference(result.Edges)
 	errors := 0
 	for _, res := range result.PageResult {
 		if res.Error != "" || res.Status >= 400 {
@@ -41,4 +40,5 @@ func main() {
 	}
 
 	fmt.Printf("Done pages= %d edges=%d error=%d\n", len(result.PageResult), len(result.Edges), errors)
+	crawler.GetReference(&result)
 }

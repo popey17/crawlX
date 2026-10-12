@@ -51,17 +51,25 @@ func NewCrawler(startURL string, maxPage int, maxDepth int) *Crawler {
 	}
 }
 
-func GetReference(edges []edge) {
+func GetReference(res *result) {
 	refs := map[string][]string{}
-	for _, edge := range edges {
+	for _, edge := range res.Edges {
 		refs[edge.Target] = append(refs[edge.Target], edge.Source)
 	}
 
 	// for target, sources := range refs {
-	// 	if len(sources) >= 2 {
-	// 		// fmt.Println(target, sources)
-	// 	}
+	// 	fmt.Println("target:", target, "sources:", sources)
 	// }
+	fmt.Println("\nIssues")
+	for _, finalRes := range res.PageResult {
+		if finalRes.Error != "" || finalRes.Status >= 400 {
+			fmt.Printf("%d %s\n", finalRes.Status, finalRes.URL)
+			fmt.Println("referers:")
+			for _, refererURL := range refs[finalRes.URL] {
+				fmt.Println("-", refererURL)
+			}
+		}
+	}
 }
 
 func (c *Crawler) enqueueLinks(normalizeUrl []string, res *result, URL string, cur queue, queueItem *[]queue) {
@@ -88,7 +96,7 @@ func (c *Crawler) enqueueLinks(normalizeUrl []string, res *result, URL string, c
 	}
 }
 
-func appendResult(res *[]pageResult, status int, title string, URL string, depth int, firstParent string, err string) {
+func appendResult(res *[]pageResult, status int, title string, URL string, depth int, firstParent string, err string, crawled int) {
 	*res = append(*res, pageResult{
 		Status:      status,
 		Title:       title,
@@ -97,6 +105,7 @@ func appendResult(res *[]pageResult, status int, title string, URL string, depth
 		FirstParent: firstParent,
 		Error:       err,
 	})
+	fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, depth, status, err, URL, firstParent)
 }
 
 func (c *Crawler) Crawl(method string) (result, error) {
@@ -118,13 +127,10 @@ func (c *Crawler) Crawl(method string) (result, error) {
 
 		//crawl
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		cancel()
-
 		status, body, err := fetcher.Fetch(ctx, method, URL)
+		cancel()
 		if err != nil {
-			appendResult(&res.PageResult, status, "", URL, cur.Depth, cur.parent, err.Error())
-
-			fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, cur.Depth, status, err.Error(), URL, cur.parent)
+			appendResult(&res.PageResult, status, "", URL, cur.Depth, cur.parent, err.Error(), crawled)
 			continue
 		}
 
@@ -133,9 +139,7 @@ func (c *Crawler) Crawl(method string) (result, error) {
 		if err != nil {
 			continue
 		}
-		appendResult(&res.PageResult, status, meta.Title, URL, cur.Depth, cur.parent, "")
-
-		fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, cur.Depth, status, "", URL, cur.parent)
+		appendResult(&res.PageResult, status, meta.Title, URL, cur.Depth, cur.parent, "", crawled)
 
 		//normalize URL
 		normalizeUrl, err := parser.ReadUrl(URL, href)
