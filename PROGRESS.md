@@ -2,7 +2,7 @@
 
 ## Current
 - **Phase:** 1 — Sequential CLI crawler
-- **Step:** 1.11 (in progress) — refactor Crawl
+- **Step:** 1.12 (in progress)
 
 ## Completed steps
 ### Phase 0 — Setup
@@ -12,7 +12,7 @@
 ### Phase 1 — Sequential CLI
 - [x] 1.1–1.9 — core crawl + depth/parent
 - [x] 1.10 — CLI flags
-- [ ] 1.11 — Split Crawl into smaller helpers
+- [x] 1.11 — `enqueLinks` + `appendResult` extracted
 - [ ] 1.12 — Issues report (bad pages + referrers from edges)
 
 ## Decisions (ADR-style)

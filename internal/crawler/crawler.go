@@ -64,6 +64,41 @@ func GetReference(edges []edge) {
 	// }
 }
 
+func (c *Crawler) enqueueLinks(normalizeUrl []string, res *result, URL string, cur queue, queueItem *[]queue) {
+	for _, link := range normalizeUrl {
+		res.Edges = append(res.Edges, edge{
+			Source: URL,
+			Target: link,
+			Type:   "anchor",
+		})
+		linkURL, err := url.Parse(link)
+		if err != nil {
+			continue
+		}
+
+		BaseURL, err := url.Parse(URL)
+		if err != nil {
+			continue
+		}
+
+		if !c.seen[link] && linkURL.Hostname() == BaseURL.Hostname() && (c.maxDepth == 0 || cur.Depth < c.maxDepth) {
+			c.seen[link] = true
+			*queueItem = append(*queueItem, queue{URL: link, Depth: cur.Depth + 1, parent: URL})
+		}
+	}
+}
+
+func appendResult(res *[]pageResult, status int, title string, URL string, depth int, firstParent string, err string) {
+	*res = append(*res, pageResult{
+		Status:      status,
+		Title:       title,
+		URL:         URL,
+		Depth:       depth,
+		FirstParent: firstParent,
+		Error:       err,
+	})
+}
+
 func (c *Crawler) Crawl(method string) (result, error) {
 	queueItem := []queue{{
 		URL:    c.startURL,
@@ -83,18 +118,12 @@ func (c *Crawler) Crawl(method string) (result, error) {
 
 		//crawl
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
+		cancel()
 
 		status, body, err := fetcher.Fetch(ctx, method, URL)
 		if err != nil {
-			res.PageResult = append(res.PageResult, pageResult{
-				Status:      status,
-				Title:       "",
-				URL:         URL,
-				Depth:       cur.Depth,
-				FirstParent: cur.parent,
-				Error:       err.Error(),
-			})
+			appendResult(&res.PageResult, status, "", URL, cur.Depth, cur.parent, err.Error())
+
 			fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, cur.Depth, status, err.Error(), URL, cur.parent)
 			continue
 		}
@@ -104,15 +133,8 @@ func (c *Crawler) Crawl(method string) (result, error) {
 		if err != nil {
 			continue
 		}
+		appendResult(&res.PageResult, status, meta.Title, URL, cur.Depth, cur.parent, "")
 
-		res.PageResult = append(res.PageResult, pageResult{
-			Status:      status,
-			Title:       meta.Title,
-			URL:         URL,
-			Depth:       cur.Depth,
-			FirstParent: cur.parent,
-			Error:       "",
-		})
 		fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, cur.Depth, status, "", URL, cur.parent)
 
 		//normalize URL
@@ -121,29 +143,9 @@ func (c *Crawler) Crawl(method string) (result, error) {
 			fmt.Println(err)
 			continue
 		}
-		// fmt.Println(normalizeUrl)
 
-		for _, link := range normalizeUrl {
-			res.Edges = append(res.Edges, edge{
-				Source: URL,
-				Target: link,
-				Type:   "anchor",
-			})
-			linkURL, err := url.Parse(link)
-			if err != nil {
-				continue
-			}
+		c.enqueueLinks(normalizeUrl, &res, URL, cur, &queueItem)
 
-			BaseURL, err := url.Parse(URL)
-			if err != nil {
-				continue
-			}
-
-			if !c.seen[link] && linkURL.Hostname() == BaseURL.Hostname() && (c.maxDepth == 0 || cur.Depth < c.maxDepth) {
-				c.seen[link] = true
-				queueItem = append(queueItem, queue{URL: link, Depth: cur.Depth + 1, parent: URL})
-			}
-		}
 	}
 	return res, nil
 }
