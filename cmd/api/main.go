@@ -1,22 +1,44 @@
 package main
 
 import (
-	"context"
-	"crawlx/internal/fetcher"
+	"flag"
 	"fmt"
 	"net/http"
-	"time"
+	"os"
+
+	"crawlx/internal/crawler"
 )
 
 func main() {
-	fmt.Println("crawlx: ok")
+	fmt.Println("crawlx")
+	fmt.Println("============")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	status, body, err := fetcher.Fetch(ctx, http.MethodGet, "https://example.com")
+	seed := flag.String("seed", "", "seed url")
+	max_pages := flag.Int("max-pages", 10, "max page to crawl")
+	max_depth := flag.Int("max-depth", 1, "max page to crawl")
+	flag.Parse()
+
+	fmt.Printf("seed=%s\nmax-pages=%d max-depth=%d\n\n", *seed, *max_pages, *max_depth)
+
+	if *seed == "" {
+		fmt.Println("Seed url required")
+		os.Exit(1)
+	}
+
+	crawlerStruct := crawler.NewCrawler(*seed, *max_pages, *max_depth)
+
+	result, err := crawlerStruct.Crawl(http.MethodGet)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	fmt.Printf("status=%d byte=%d\n", status, len(body))
+
+	crawler.GetReference(result.Edges)
+	errors := 0
+	for _, res := range result.PageResult {
+		if res.Error != "" || res.Status >= 400 {
+			errors++
+		}
+	}
+
+	fmt.Printf("Done pages= %d edges=%d error=%d\n", len(result.PageResult), len(result.Edges), errors)
 }
