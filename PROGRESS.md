@@ -1,28 +1,26 @@
 # Crawler Learning Progress
 
 ## Current
-- **Phase:** 1 — Sequential CLI crawler
-- **Step:** Phase 1 checkpoint
+- **Phase:** 2 — Concurrency
+- **Step:** 2.1 (in progress)
 
 ## Completed steps
 ### Phase 0 — Setup
 - [x] 0.1–0.6
-- [~] Phase 0 checkpoint — skipped
+- [~] checkpoint skipped
 
 ### Phase 1 — Sequential CLI
-- [x] 1.1–1.9 — fetch, parse, normalize, queue/seen, depth, first_parent
-- [x] 1.10 — CLI flags
-- [x] 1.11 — refactor helpers (`enqueueLinks`, `appendResult`)
-- [x] 1.12 — Issues + referrers; port normalize fixed (keep non-default ports)
+- [x] 1.1–1.12 — full sequential crawler + issues/referrers
+- [x] Phase 1 checkpoint — passed (~4/5) with small depth wording fix
+
+### Phase 2 — Concurrency
+- [ ] 2.1 — Goroutines basics + ownership questions + race demo
+
+## Concepts to revisit
+- Depth = link hops from seed (not “page count”)
+- 3xx + CheckRedirect (later)
+- Rate limit / robots (Phase 2+)
 
 ## Decisions (ADR-style)
-- Depth = hops from seed; maxDepth/maxPage 0 = unlimited
-- Edges always recorded; enqueue only if new + same host + depth OK
-- Issues: status >= 300 or Error != "" (3xx needs no-follow later)
-- Per-fetch timeout + cancel() after Fetch
-
-## Later
-- http.Client CheckRedirect for real 3xx
-- robots.txt, rate limit, edge dedupe map
-- httptest tests
-- Phase 2 concurrency
+- Keep non-default ports in normalize
+- Issues from pages + referrers from edges

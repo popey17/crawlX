@@ -126,7 +126,7 @@ func (c *Crawler) Crawl(method string) (result, error) {
 		// fmt.Println(URL, crawled)
 
 		//crawl
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		status, body, err := fetcher.Fetch(ctx, method, URL)
 		cancel()
 		if err != nil {
