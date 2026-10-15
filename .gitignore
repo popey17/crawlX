@@ -1,5 +1,6 @@
 tmp/
 bin/
+playground/
 .DS_Store
 .env
 

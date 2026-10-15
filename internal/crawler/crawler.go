@@ -6,6 +6,7 @@ import (
 	"crawlx/internal/parser"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -72,13 +73,16 @@ func GetReference(res *result) {
 	}
 }
 
-func (c *Crawler) enqueueLinks(normalizeUrl []string, res *result, URL string, cur queue, queueItem *[]queue) {
+func (c *Crawler) enqueueLinks(mutex *sync.Mutex, normalizeUrl []string, res *result, URL string, cur queue, jobs chan queue, pending *int) {
 	for _, link := range normalizeUrl {
+		mutex.Lock()
 		res.Edges = append(res.Edges, edge{
 			Source: URL,
 			Target: link,
 			Type:   "anchor",
 		})
+		mutex.Unlock()
+
 		linkURL, err := url.Parse(link)
 		if err != nil {
 			continue
@@ -89,14 +93,26 @@ func (c *Crawler) enqueueLinks(normalizeUrl []string, res *result, URL string, c
 			continue
 		}
 
-		if !c.seen[link] && linkURL.Hostname() == BaseURL.Hostname() && (c.maxDepth == 0 || cur.Depth < c.maxDepth) {
-			c.seen[link] = true
-			*queueItem = append(*queueItem, queue{URL: link, Depth: cur.Depth + 1, parent: URL})
+		if linkURL.Hostname() != BaseURL.Hostname() || (c.maxDepth != 0 && cur.Depth >= c.maxDepth) {
+			continue
 		}
+
+		mutex.Lock()
+
+		if c.seen[link] {
+			mutex.Unlock()
+			continue
+		} else {
+			c.seen[link] = true
+			*pending = *pending + 1
+		}
+		mutex.Unlock()
+		jobs <- queue{URL: link, Depth: cur.Depth + 1, parent: URL}
 	}
 }
 
-func appendResult(res *[]pageResult, status int, title string, URL string, depth int, firstParent string, err string, crawled int) {
+func appendResult(mutex *sync.Mutex, res *[]pageResult, status int, title string, URL string, depth int, firstParent string, err string, crawled int) {
+	mutex.Lock()
 	*res = append(*res, pageResult{
 		Status:      status,
 		Title:       title,
@@ -105,51 +121,81 @@ func appendResult(res *[]pageResult, status int, title string, URL string, depth
 		FirstParent: firstParent,
 		Error:       err,
 	})
+	mutex.Unlock()
 	fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, depth, status, err, URL, firstParent)
 }
 
+func (c *Crawler) worker(mutex *sync.Mutex, wg *sync.WaitGroup, jobs chan queue, pending *int, crawled *int, method string, res *result) {
+	defer wg.Done()
+	finish := func() {
+		mutex.Lock()
+		*pending--
+		if *pending == 0 {
+			close(jobs)
+		}
+		mutex.Unlock()
+	}
+	for job := range jobs {
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+
+		mutex.Lock()
+		*crawled++
+		n := *crawled
+		mutex.Unlock()
+		status, body, err := fetcher.Fetch(ctx, method, job.URL)
+		cancel()
+
+		if err != nil {
+			appendResult(mutex, &res.PageResult, status, "", job.URL, job.Depth, job.parent, err.Error(), n)
+			finish()
+			continue
+		}
+
+		// 	//parse html
+		meta, href, err := parser.ParseHTML(body)
+		if err != nil {
+			finish()
+			continue
+		}
+		appendResult(mutex, &res.PageResult, status, meta.Title, job.URL, job.Depth, job.parent, "", n)
+
+		// 	//normalize URL
+		normalizeUrl, err := parser.ReadUrl(job.URL, href)
+		if err != nil {
+			fmt.Println(err)
+			finish()
+			continue
+		}
+		c.enqueueLinks(mutex, normalizeUrl, res, job.URL, job, jobs, pending)
+
+		finish()
+	}
+}
+
 func (c *Crawler) Crawl(method string) (result, error) {
-	queueItem := []queue{{
+	jobs := make(chan queue, 4000)
+	wg := &sync.WaitGroup{}
+	mutex := &sync.Mutex{}
+
+	jobs <- queue{
 		URL:    c.startURL,
 		Depth:  0,
 		parent: "",
-	}}
-	c.seen[c.startURL] = true
-	var crawled int
-	res := result{}
-
-	for len(queueItem) > 0 && (c.maxPage == 0 || crawled < c.maxPage) {
-		cur := queueItem[0]
-		URL := cur.URL
-		queueItem = queueItem[1:]
-		crawled++
-		// fmt.Println(URL, crawled)
-
-		//crawl
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		status, body, err := fetcher.Fetch(ctx, method, URL)
-		cancel()
-		if err != nil {
-			appendResult(&res.PageResult, status, "", URL, cur.Depth, cur.parent, err.Error(), crawled)
-			continue
-		}
-
-		//parse html
-		meta, href, err := parser.ParseHTML(body)
-		if err != nil {
-			continue
-		}
-		appendResult(&res.PageResult, status, meta.Title, URL, cur.Depth, cur.parent, "", crawled)
-
-		//normalize URL
-		normalizeUrl, err := parser.ReadUrl(URL, href)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		c.enqueueLinks(normalizeUrl, &res, URL, cur, &queueItem)
-
 	}
-	return res, nil
+
+	c.seen[c.startURL] = true
+	pending := 1
+	crawled := 0
+
+	res := &result{}
+
+	for range 4 {
+		wg.Add(1)
+		go c.worker(mutex, wg, jobs, &pending, &crawled, method, res)
+	}
+
+	wg.Wait()
+
+	return *res, nil
 }

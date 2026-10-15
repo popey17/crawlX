@@ -2,25 +2,19 @@
 
 ## Current
 - **Phase:** 2 — Concurrency
-- **Step:** 2.1 (in progress)
+- **Step:** 2.5 (in progress) — concurrent Crawl
 
 ## Completed steps
-### Phase 0 — Setup
-- [x] 0.1–0.6
-- [~] checkpoint skipped
+### Phase 1
+- [x] Sequential crawler + issues/referrers
 
-### Phase 1 — Sequential CLI
-- [x] 1.1–1.12 — full sequential crawler + issues/referrers
-- [x] Phase 1 checkpoint — passed (~4/5) with small depth wording fix
+### Phase 2
+- [x] 2.1 — Race demo + WaitGroup
+- [x] 2.2 — Mutex check-and-add
+- [x] 2.3 — Channels playgrounds
+- [x] 2.4 — Pending-work playground
+- [ ] 2.5 — Wire worker pool into real crawler
 
-### Phase 2 — Concurrency
-- [ ] 2.1 — Goroutines basics + ownership questions + race demo
-
-## Concepts to revisit
-- Depth = link hops from seed (not “page count”)
-- 3xx + CheckRedirect (later)
-- Rate limit / robots (Phase 2+)
-
-## Decisions (ADR-style)
-- Keep non-default ports in normalize
-- Issues from pages + referrers from edges
+## Later
+- Rate limit, robots, `-workers` flag
+- Redirect CheckRedirect / 3xx
