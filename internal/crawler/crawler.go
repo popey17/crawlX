@@ -4,6 +4,7 @@ import (
 	"context"
 	"crawlx/internal/fetcher"
 	"crawlx/internal/parser"
+	"crawlx/internal/ui"
 	"fmt"
 	"net/url"
 	"sync"
@@ -63,13 +64,13 @@ func GetReference(res *result) {
 	// for target, sources := range refs {
 	// 	fmt.Println("target:", target, "sources:", sources)
 	// }
-	fmt.Println("\nIssues")
+	fmt.Println("\n" + ui.Bold(ui.Red("Issues")))
 	for _, finalRes := range res.PageResult {
 		if finalRes.Error != "" || finalRes.Status >= 400 {
-			fmt.Printf("%d %s\n", finalRes.Status, finalRes.URL)
-			fmt.Println("referers:")
+			fmt.Println(ui.Red(fmt.Sprintf("%d %s", finalRes.Status, finalRes.URL)))
+			fmt.Println(ui.Dim("referers:"))
 			for _, refererURL := range refs[finalRes.URL] {
-				fmt.Println("-", refererURL)
+				fmt.Println(ui.Dim("- " + refererURL))
 			}
 		}
 	}
@@ -124,7 +125,7 @@ func appendResult(mutex *sync.Mutex, res *[]pageResult, status int, title string
 		Error:       err,
 	})
 	mutex.Unlock()
-	fmt.Printf("#%d depth=%d status=%d err=%s %s %s\n", crawled, depth, status, err, URL, firstParent)
+	fmt.Println(ui.CrawlLine(crawled, depth, status, err, URL, firstParent))
 }
 
 func (c *Crawler) worker(mutex *sync.Mutex, wg *sync.WaitGroup, jobs chan queue, pending *int, crawled *int, method string, res *result) {

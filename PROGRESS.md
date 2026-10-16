@@ -1,8 +1,8 @@
 # Crawler Learning Progress
 
 ## Current
-- **Phase:** 2 — Concurrency
-- **Step:** 2.5b (review) — max-pages / workers / buffer
+- **Phase:** paused (CLI polish) — colors + banner done
+- **Next crawl work:** finish 2.5b, then 2.6 rate limit
 
 ## Completed steps
 ### Phase 1

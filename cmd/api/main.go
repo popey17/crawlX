@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"crawlx/internal/crawler"
+	"crawlx/internal/ui"
 )
 
 func main() {
-	fmt.Println("crawlx")
-	fmt.Println("============")
+	ui.Banner()
 
 	seed := flag.String("seed", "", "seed url")
 	max_pages := flag.Int("max-pages", 10, "max page to crawl")
@@ -19,10 +19,10 @@ func main() {
 	workers := flag.Int("workers", 10, "workers count to work")
 	flag.Parse()
 
-	fmt.Printf("seed=%s\nmax-pages=%d max-depth=%d\n\n", *seed, *max_pages, *max_depth)
+	fmt.Println(ui.Dim(fmt.Sprintf("seed=%s\nmax-pages=%d max-depth=%d workers=%d\n", *seed, *max_pages, *max_depth, *workers)))
 
 	if *seed == "" {
-		fmt.Println("Seed url required")
+		fmt.Println(ui.Red("Seed url required"))
 		os.Exit(1)
 	}
 
@@ -34,7 +34,7 @@ func main() {
 
 	result, err := crawlerStruct.Crawl(http.MethodGet)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(ui.Red(err.Error()))
 	}
 
 	errors := 0
@@ -44,6 +44,12 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Done pages= %d edges=%d error=%d\n", len(result.PageResult), len(result.Edges), errors)
+	fmt.Println("")
+	done := fmt.Sprintf("Done pages= %d edges=%d error=%d", len(result.PageResult), len(result.Edges), errors)
+	if errors == 0 {
+		fmt.Println(ui.Cyan(done))
+	} else {
+		fmt.Printf("Done pages= %d edges=%d %s\n", len(result.PageResult), len(result.Edges), ui.Red(fmt.Sprintf("error=%d", errors)))
+	}
 	crawler.GetReference(&result)
 }
