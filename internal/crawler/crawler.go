@@ -15,6 +15,7 @@ type Crawler struct {
 	startURL string
 	maxPage  int
 	maxDepth int
+	workers  int
 }
 
 type queue struct {
@@ -43,12 +44,13 @@ type result struct {
 	Edges      []edge
 }
 
-func NewCrawler(startURL string, maxPage int, maxDepth int) *Crawler {
+func NewCrawler(startURL string, maxPage int, maxDepth int, workers int) *Crawler {
 	return &Crawler{
 		seen:     map[string]bool{},
 		startURL: startURL,
 		maxPage:  maxPage,
 		maxDepth: maxDepth,
+		workers:  workers,
 	}
 }
 
@@ -167,14 +169,24 @@ func (c *Crawler) worker(mutex *sync.Mutex, wg *sync.WaitGroup, jobs chan queue,
 			finish()
 			continue
 		}
-		c.enqueueLinks(mutex, normalizeUrl, res, job.URL, job, jobs, pending)
+
+		mutex.Lock()
+		var shouldContinue bool
+		if c.maxPage == 0 || *crawled < c.maxPage {
+			shouldContinue = true
+		}
+		mutex.Unlock()
+
+		if shouldContinue {
+			c.enqueueLinks(mutex, normalizeUrl, res, job.URL, job, jobs, pending)
+		}
 
 		finish()
 	}
 }
 
 func (c *Crawler) Crawl(method string) (result, error) {
-	jobs := make(chan queue, 4000)
+	jobs := make(chan queue, max(1024, c.maxPage))
 	wg := &sync.WaitGroup{}
 	mutex := &sync.Mutex{}
 
@@ -190,7 +202,7 @@ func (c *Crawler) Crawl(method string) (result, error) {
 
 	res := &result{}
 
-	for range 4 {
+	for range c.workers {
 		wg.Add(1)
 		go c.worker(mutex, wg, jobs, &pending, &crawled, method, res)
 	}

@@ -2,7 +2,7 @@
 
 ## Current
 - **Phase:** 2 — Concurrency
-- **Step:** 2.5 (in progress) — concurrent Crawl
+- **Step:** 2.5b (review) — max-pages / workers / buffer
 
 ## Completed steps
 ### Phase 1
@@ -13,8 +13,10 @@
 - [x] 2.2 — Mutex check-and-add
 - [x] 2.3 — Channels playgrounds
 - [x] 2.4 — Pending-work playground
-- [ ] 2.5 — Wire worker pool into real crawler
+- [x] 2.5 — Concurrent Crawl (worker pool + pending)
+- [ ] 2.5b — max-pages, -workers, buffer sizing
 
 ## Later
-- Rate limit, robots, `-workers` flag
-- Redirect CheckRedirect / 3xx
+- 2.6 Rate limit, 2.7 robots
+- Redirects, retries, graceful shutdown
+- Docker / API / Postgres
